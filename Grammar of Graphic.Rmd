@@ -9,22 +9,277 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# Understanding the grammar of graphics
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+# 1) Data
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Datasets mtcars :
+Motor Trend Car Road Tests
 
-```{r cars}
-summary(cars)
+### Description
+
+The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973-74 models).
+
+### Format
+
+A data frame with 32 observations on 11 (numeric) variables.
+
+[, 1]	 mpg	 Miles/(US) gallon
+[, 2]	 cyl	 Number of cylinders
+[, 3]	 disp	 Displacement (cu.in.)
+[, 4]	 hp	 Gross horsepower
+[, 5]	 drat	 Rear axle ratio
+[, 6]	 wt	 Weight (1000 lbs)
+[, 7]	 qsec	 1/4 mile time
+[, 8]	 vs	 Engine (0 = V-shaped, 1 = straight)
+[, 9]	 am	 Transmission (0 = automatic, 1 = manual)
+[,10]	 gear	 Number of forward gears
+[,11]	 carb	 Number of carburetors
+
+Note that it is recommended to use wide format (but not of everytime !)
+
+```{r}
+library(ggplot2) # Load ggplot2 package
+library(dplyr)
+head(mtcars)
 ```
 
-## Including Plots
+# 2) Aesthetics
 
-You can also embed plots, for example:
+Aesthetics is mapping
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+x-axis: wt: weight
+y-axis:qsec = 1/4 mile time
+col: cyl = number of cylinders
+
+You can use aesthetics in the geom layer but only do that when you want to combine different datasets 
+
+```{r eval=FALSE}
+ggplot(mtcars,aes(x=wt,y=qsec,col=hp))
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+# 3) Geometries
+
+geom_point()
+```{r}
+ggplot(mtcars,aes(x=wt,
+                  y=qsec,
+                  col=as.factor(cyl)))+
+  geom_point()
+```
+Note that you can combine several geometries:
+```{r}
+ggplot(mtcars,aes(x=wt,
+                  y=qsec))+
+  geom_point(alpha=0.4)+
+  geom_smooth(se=FALSE,col="black")+
+  geom_smooth(aes(col=as.factor(cyl)),se=FALSE)
+```
+Look like to over fit too much + I would like to have indicators for each points 
+```{r}
+ggplot(mtcars,aes(x=wt,
+                  y=qsec,
+                  col=as.factor(cyl)))+
+  geom_point(alpha=0.4)+
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(aes(group = 1), method = "lm", se = FALSE, linetype = 2)
+```
+You can change the display of your geomtry in the geom_layer
+```{r}
+ggplot(mtcars, aes(x=wt,y=qsec, col=as.factor(cyl)))+geom_point() 
+```
+```{r}
+ggplot(mtcars, aes(x=wt,y=qsec, col=as.factor(cyl)))+geom_point(shape=1, size=2)
+```
+The mapping did not change !
+
+| Aesthetic        | Description | 
+| :--------------: |:-----------:|
+| x    | x-axis position |
+| y      | y-axis position      |
+| colour | colour of outlines shape      |
+| fill | fill colour      |
+| size | Diameter of points, thickness of line      |
+| alpha | alpha from 0 (invisble) to 1 (opaque)      |
+| labels | Text on a plot or axes      |
+| linetype |  Line dash pa!ern      |
+| shape | Shape      |
+
+### Modifying the aesthetics
+```{r}
+cyl_am <- ggplot(mtcars, aes(x = factor(cyl), fill = factor(am)))
+cyl_am+geom_bar()
+```
+```{r}
+cyl_am+geom_bar(position="fill")
+```
+
+```{r}
+cyl_am+geom_bar(position="dodge")
+```
+The axes need to be refine (I don't like the color and the name): 
+```{r}
+val = c("darkblue", "skyblue")
+lab = c("Manual", "Automatic")
+ 
+cyl_am+geom_bar(position="dodge")+
+  scale_x_discrete("Cylinders") + 
+  scale_y_continuous("Number") +
+  scale_fill_manual("Transmission", 
+                    values = val,
+                    labels = lab) 
+```
+
+
+# 4) Facets
+
+`facet_grid(rows ~ columns)`: create several views 
+Really useful when we have several variables to plot, especially ordinal.
+```{r}
+ggplot(mtcars,aes(x=wt,
+                  y=qsec,
+                  col=as.factor(cyl)))+
+  geom_point()+
+  facet_grid(.~as.factor(carb))
+```
+```{r}
+ggplot(mtcars,aes(x=wt,
+                  y=qsec,
+                  col=as.factor(cyl)))+
+  geom_point()+
+  facet_grid(as.factor(am)~as.factor(carb))
+```
+If you want to drop some levels (no observations): `space="free_y"`
+
+If you would like to have adaptative scale: `scale="free_y"`
+
+# 5) Statistics
+ 
+ We add a linear regression.
+ 
+ stat_functions can be closed to geom. There is no differences between `geom_smooth(method = "lm", se = F, col = "red")` and `stat_smooth(method = "lm", se = F, col = "red")`
+ 
+```{r}
+ggplot(mtcars,aes(x=wt,
+                  y=qsec,
+                  col=as.factor(cyl)))+
+  geom_point()+
+  facet_grid(.~as.factor(carb))+
+  stat_smooth(method = "lm", se = F, col = "red")
+```
+
+Several statistics:
+
+```{r}
+ggplot(mtcars,aes(x=wt,
+                  y=qsec,
+                  col=as.factor(cyl)))+
+  geom_point()+
+  stat_smooth(method = "loess", se = F)+
+  stat_smooth(method = "lm", se = F,linetype="dotdash")+
+  stat_smooth(method = "lm", se = F,linetype="dotdash",aes(group=1,col="All lm"))+
+  stat_smooth(method = "loess",
+              se = F,
+              aes(group=1,col="All"),
+              span=0.7)+
+  stat_quantile(quantiles = 0.5,aes(group=1,col="All median lm"))
+```
+# 6) Coordinates
+
+Note that we find the scale_function that enables us to access to the aesthetics. 
+
+* `scale_y_continuous`
+* `scale_x_discrete`
+* `scale_color_discrete`
+* `scale_fill_continuous`
+* `scale_shape...`
+* `scale_linetype...`
+
+
+Useful to zoom on the plot. 
+* `xlim()`
+* `scale_x_continuous`
+* `coordcartesian(xlim=)`
+
+Aspect ratio, by default 1:1. Beware when you change it, it can be very deceiptful !
+* `coord_fixed()`
+* `coord_equal()`
+```{r}
+ggplot(mtcars,aes(x=wt,
+                  y=qsec,
+                  col=as.factor(cyl)))+
+  geom_point()+
+  facet_grid(.~as.factor(carb))+
+  stat_smooth(method = "lm",
+              se = F,
+              col = "red")+
+  scale_y_continuous("1/4 time time in sec",
+                     limits=c(15,25))+
+  coord_equal()
+```
+
+Use polar coordinate to create pie chart 
+```{r}
+ggplot(mtcars, aes(x = 1, fill = as.factor(cyl)))+
+  geom_bar()
+```
+
+```{r}
+ggplot(mtcars, aes(x = 1, fill = as.factor(cyl)))+
+  geom_bar()+
+  coord_polar(theta = "y")
+```
+
+# 7) Themes
+
+Themes control all the non-ink data: all the visual elements that are not part of the data.
+
+4 types: 
+* text: `element_text()
+* line: `element_line()`
+* rectangle: `element_rect()`
+* delete: `element_blank()`
+
+![Elements of theme](image/Elements of theme.PNG)
+
+```{r}
+ggplot(mtcars%>%filter(carb<6 & qsec>15),aes(x=wt,
+                  y=qsec,
+                  col=as.factor(cyl)))+
+  geom_point()+
+  facet_grid(.~as.factor(carb))+
+  stat_smooth(method = "lm",
+              se = F,
+              col = "red")+
+  scale_y_continuous("1/4 time time in sec",
+                     limits=c(15,25))+
+  theme(plot.background =element_rect(fill = "white",color="black",size=1),
+        panel.grid.major = element_blank(),
+        axis.line=element_line(color="red"),
+        axis.ticks=element_line(color="red"),
+        legend.position = "bottom")
+```
+
+Use a pre-defined theme
+
+```{r}
+ggplot(mtcars%>%filter(carb<6 & qsec>15),aes(x=wt,
+                  y=qsec,
+                  col=as.factor(cyl)))+
+  geom_point()+
+  facet_grid(.~as.factor(carb))+
+  stat_smooth(method = "lm",
+              se = F,
+              col = "red")+
+  scale_y_continuous("1/4 time time in sec",
+                     limits=c(15,25))+
+  theme_minimal()
+```
+
+# Conclusion
+
+Building a graph is manipulating the grammar of graphic ! s
+
+![Layers of Grammar](image/Grammar of graphics.PNG)
+
+
