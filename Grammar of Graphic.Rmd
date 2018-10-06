@@ -2,7 +2,7 @@
 title: "Grammar of Graphic"
 author: "Jean Castaing"
 date: "6 octobre 2018"
-output: html_document
+output: rmarkdown::github_document
 ---
 
 ```{r setup, include=FALSE}
